@@ -8,8 +8,9 @@ namespace F1Interface.Api.Generic
         /// Bad request object containing the error
         /// </summary>
         public BadRequestResponse BadRequest { get; private init; }
-        public BadRequestException(BadRequestResponse badRequest)
-            : base(badRequest.Error)
+
+        public BadRequestException(BadRequestResponse badRequest = null)
+            : base(badRequest?.Error ?? "A bad request exception occurred")
         {
             BadRequest = badRequest;
         }
