@@ -1,7 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="PlaywrightSharp" Version="0.191.2"/>
+  </ItemGroup>
+  
+  <ItemGroup>
+    <ProjectReference Include="..\F1Interface.Domain\F1Interface.Domain.csproj"/>
+  </ItemGroup>
 </Project>
