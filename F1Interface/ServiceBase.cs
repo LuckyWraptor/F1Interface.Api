@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using F1Interface.Domain;
 using Microsoft.Extensions.Logging;
 using PlaywrightSharp;
 
@@ -8,7 +9,12 @@ namespace F1Interface
 {
     public abstract class ServiceBase<T>
     {
-        private const bool EmulateRealDelays = true;
+#if DEBUG
+        private static readonly bool EmulateRealDelays = !XUnitUtils.IsUnitTesting;
+#else
+        private static readonly bool EmulateRealDelays = true;
+#endif
+
         protected static readonly Random random = new Random();
 
         protected readonly ILogger<T> logger;
