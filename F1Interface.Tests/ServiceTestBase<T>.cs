@@ -5,7 +5,7 @@ using PlaywrightSharp;
 
 namespace F1Interface.Tests
 {
-    public class ServiceTestBase<T>
+    public class ServiceTestBase<T> where T : ServiceBase<T>
     {
         protected Mock<IBrowser> BrowserMock { get; private init; }
         protected Mock<IPage> PageMock { get; private init; }
