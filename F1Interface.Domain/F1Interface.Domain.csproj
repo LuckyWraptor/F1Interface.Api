@@ -6,5 +6,6 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="F1Interface" />
+    <InternalsVisibleTo Include="F1Interface.Tests" />
   </ItemGroup>
 </Project>

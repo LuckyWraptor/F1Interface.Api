@@ -10,4 +10,8 @@
   <ItemGroup>
     <ProjectReference Include="..\F1Interface.Domain\F1Interface.Domain.csproj"/>
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="F1Interface.Tests" />
+  </ItemGroup>
 </Project>
