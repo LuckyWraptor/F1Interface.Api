@@ -166,110 +166,6 @@ namespace F1Interface.Tests
                         .WithMessage("Unhandled response (this shouldn't happen!)");
         }
 
-        [Theory]
-        [InlineData(null)]
-        [InlineData(AuthenticationService.IdentityProvider)]
-        public async Task AuthenticateF1TVTokenAsync_Valid(string identityProvider)
-        {
-            // Arrange
-            SetTokenResponse();
-
-            // Act
-            var response = await Service.AuthenticateF1TVTokenAsync(PageMock.Object, "valid_session_token", identityProvider);
-
-            // Assert
-            response.Should()
-                        .NotBeNull();
-            response.Token.Should()
-                        .NotBeNull()
-                        .And.BeEquivalentTo("valid_token");
-        }
-
-        [Fact]
-        public async Task AuthenticateF1TVTokenAsync_Valid_WithoutIPageParameter()
-        {
-            // Arrange 
-            SetTokenResponse();
-
-            // Act
-            await Service.AuthenticateF1TVTokenAsync("username");
-
-            // Assert
-            PageMock.Object.IsClosed.Should()
-                        .BeTrue();
-        }
-
-        [Fact]
-        public void AuthenticateF1TVTokenAsync_BadRequest()
-        {
-            // Arrange
-            var responseMock = new Mock<IResponse>();
-            responseMock.Setup(x => x.Status)
-                        .Returns(HttpStatusCode.BadRequest);
-            responseMock.Setup(x => x.GetJsonAsync<BadRequestResponse>(It.IsAny<JsonSerializerOptions>()))
-                        .Returns(Task.FromResult(new BadRequestResponse
-                        {
-                            Error = "Some api error message",
-                            ErrorCode = "ERROR_CODE",
-                            ValidationErrors = new Dictionary<string, FieldError>
-                            {
-                                {  "property1", new FieldError { Code = "required", Message = "Some Message" } },
-                                {  "property2", new FieldError { Code = "required1", Message = "Some Message" } }
-                            }
-                        }));
-
-            SetTokenResponse(responseMock.Object);
-
-            // Act
-            Func<Task> action = () => Service.AuthenticateF1TVTokenAsync("invalid_token");
-
-            // Assert
-            var assertable = action.Should()
-                        .Throw<BadRequestException>()
-                        .And.Should()
-                                .NotBeNull();
-        }
-
-        [Theory]
-        [InlineData(HttpStatusCode.Forbidden)]
-        [InlineData(HttpStatusCode.NotFound)]
-        public void AuthenticateF1TVTokenAsync_UnhandledException(HttpStatusCode statusCode)
-        {
-            // Arrange
-            var responseMock = new Mock<IResponse>();
-            responseMock.Setup(x => x.Status)
-                .Returns(statusCode);
-            SetTokenResponse(responseMock.Object);
-
-            // Act
-            Func<Task> action = () => Service.AuthenticateF1TVTokenAsync("valid_token");
-
-            // Assert
-            action.Should()
-                        .Throw<F1InterfaceException>()
-                        .WithMessage("Unhandled response (this shouldn't happen!)");
-        }
-
-        [Fact]
-        public void AuthenticateF1TVTokenAsync_InvalidResponse()
-        {
-            // Arrange
-            var responseMock = new Mock<IResponse>();
-            responseMock.Setup(x => x.GetJsonAsync<TokenObject>(It.IsAny<JsonSerializerOptions>()))
-                .Returns(Task.FromResult(default(TokenObject)));
-            responseMock.Setup(x => x.Status)
-                .Returns(HttpStatusCode.OK);
-            SetTokenResponse(responseMock.Object);
-
-            // Act
-            Func<Task> action = () => Service.AuthenticateF1TVTokenAsync("valid_token");
-
-            // Assert
-            action.Should()
-                        .Throw<HttpException>()
-                        .WithMessage("F1TV Token failed as an invalid/incomprehensive response was retrieved.");
-        }
-
         private void SetAuthenticationResponse(IResponse response = null)
         {
             if (response == null)
@@ -309,9 +205,6 @@ namespace F1Interface.Tests
 
                 response = responseMock.Object;
             }
-
-            PageMock.Setup(x => x.GoToAsync(Endpoints.F1TV.AuthenticateToken, It.IsAny<LifecycleEvent?>(), It.IsAny<string>(), It.IsAny<int?>()))
-                        .Returns(Task.FromResult(response));
         }
     }
 }
