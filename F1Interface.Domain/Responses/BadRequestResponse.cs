@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using F1Interface.Domain.Models;
 
-namespace F1Interface.Domain.Requests
+namespace F1Interface.Domain.Responses
 {
     public class BadRequestResponse
     {

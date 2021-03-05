@@ -1,4 +1,4 @@
-using F1Interface.Domain.Requests;
+using F1Interface.Domain.Responses;
 
 namespace F1Interface.Domain
 {
