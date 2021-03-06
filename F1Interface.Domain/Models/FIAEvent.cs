@@ -6,7 +6,7 @@ namespace F1Interface.Domain.Models
     /// <summary>
     /// An FIA-planned event (race/testing)
     /// </summary>
-    public class Event
+    public class FIAEvent
     {
         public uint Id { get; set; }
         public uint SeasonId { get; set; }
@@ -19,7 +19,6 @@ namespace F1Interface.Domain.Models
 
         public Circuit Circuit { get; set; }
 
-        [JsonIgnore]
-        public FIASeason Season { get; set; }
+        public Session[] Sessions { get; set; }
     }
 }

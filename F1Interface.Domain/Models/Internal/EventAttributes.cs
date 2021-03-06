@@ -13,5 +13,6 @@ namespace F1Interface.Domain.Models.Internal
         [JsonPropertyName("Circuit_Short_Name")]
         public string CircuitShortName { get; set; }
         public bool IsTestEvent { get; set; }
+        public bool IsOnAir { get; set; }
     }
 }

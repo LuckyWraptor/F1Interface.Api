@@ -1,3 +1,4 @@
+using System;
 using System.Text.Json.Serialization;
 
 namespace F1Interface.Domain.Models.Internal
@@ -18,5 +19,9 @@ namespace F1Interface.Domain.Models.Internal
         public string MeetingCountryName { get; set; }
         [JsonPropertyName("Meeting_Sponsor")]
         public string MeetingSponsor { get; set; }
+        [JsonPropertyName("Meeting_End_Date")]
+        public DateTime MeetingEnds { get; set; }
+        [JsonPropertyName("Meeting_Start_Date")]
+        public DateTime MeetingStarts { get; set; }
     }
 }

@@ -26,7 +26,6 @@ namespace F1Interface
         public AuthenticationService(ILogger<AuthenticationService> logger, IBrowser browser)
             : base(logger, browser)
         {
-
         }
 
         /// <summary>

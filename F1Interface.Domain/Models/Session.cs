@@ -9,12 +9,14 @@ namespace F1Interface.Domain.Models
     public class Session
     {
         public ulong Id { get; set; }
+        public string ImageId { get; set; }
+        public string Series { get; set; }
         public uint EventId { get; set; }
         public DateTime Starts { get; set; }
         public DateTime Ends { get; set; }
         public bool Testing { get; set; }
-        
-        [JsonIgnore]
-        public Event Event { get; set; }
+        public bool IsLive { get; set; }
+
+        public FIAEvent Event { get; set;}
     }
 }

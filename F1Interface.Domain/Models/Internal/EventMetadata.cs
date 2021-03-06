@@ -25,6 +25,6 @@ namespace F1Interface.Domain.Models.Internal
         public string TitleBrief { get; set; }
         public string UiDuration { get; set; }
         [JsonPropertyName("emfAttributes")]
-        public MeetingAttributes Attributes { get; set; }
+        public EventAttributes Attributes { get; set; }
     }
 }
