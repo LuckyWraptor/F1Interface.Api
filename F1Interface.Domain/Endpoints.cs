@@ -15,6 +15,7 @@ namespace F1Interface.Domain
             public const string Api = "https://f1tv.formula1.com/2.0/A/ENG/WEB_HLS/";
             public const string SearchEndpoint = Api + "ALL/PAGE/SEARCH/VOD/F1_TV_Pro_Annual/2";
             public const string ContentEndpoint = Api + "ALL/CONTENT/VIDEO/{{CONTENT_ID}}/F1TV_Pro_Annual/2";
+            public const string PlaybackEndpoint = Api + "ALL/CONTENT/PLAY?contentId={{CONTENT_ID}}";
         }
     }
 }

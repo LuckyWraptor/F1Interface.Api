@@ -106,7 +106,8 @@ namespace F1Interface
             }
 
             SeasonResponse result = null;
-            try {
+            try
+            {
                 string url = Endpoints.F1TV.ContentEndpoint.Replace("{{CONTENT_ID}}", contentId.ToString());
                 logger.LogDebug("Requesting session data for id {ContentId} at {Url}", contentId);
                 HttpResponseMessage response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
@@ -116,8 +117,9 @@ namespace F1Interface
                     result = await response.Content.ReadFromJsonAsync<SeasonResponse>()
                         .ConfigureAwait(false);
                 }
-
-            } catch (HttpRequestException ex) {
+            }
+            catch (HttpRequestException ex)
+            {
                 throw new HttpException("Couldn't fetch seasonal data", ex.StatusCode.GetValueOrDefault());
             }
 
@@ -166,13 +168,49 @@ namespace F1Interface
 
             throw new F1InterfaceException("Couldn't parse session, this shouldn't happen!");
         }
+
+        public async Task<Playback> GenerateStreamUrlAsync(ulong contentId, CancellationToken cancellationToken = default)
+        {
+            if (contentId > 0)
+            {
+                throw new ArgumentException("The ContentId can't be zero");
+            }
+
+            PlaybackResponse result = null;
+            try
+            {
+                string url = $"{Endpoints.F1TV.PlaybackEndpoint}{contentId}";
+                logger.LogDebug("Requesting playback stream url for id {ContentId} at {Url}", contentId);
+                HttpResponseMessage response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(false);
+                if (response.IsSuccessStatusCode)
+                {
+                    result = await response.Content.ReadFromJsonAsync<PlaybackResponse>()
+                        .ConfigureAwait(false);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new HttpException("Couldn't generate the stream url", ex.StatusCode.GetValueOrDefault());
+            }
+
+            if (result.ResultCode == "OK" && result.Result != null)
+            {
+                result.Result.ContentId = contentId;
+
+                return result.Result;
+            }
+
+            throw new F1InterfaceException("Couldn't parse playback token, this shouldn't happen.");
+        }
 #endregion
 
 #region Private logic
         private async Task<FIAEvent[]> GetEvents(QueryStringBuilder queryBuilder, CancellationToken cancellationToken)
         {
             SeasonResponse result = null;
-            try {
+            try
+            {
                 string url = queryBuilder.ToString();
                 logger.LogDebug("Requesting season events data using url {Url}", url);
                 HttpResponseMessage response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
@@ -183,14 +221,15 @@ namespace F1Interface
                         .ConfigureAwait(false);
                 }
 
-            } catch (HttpRequestException ex) {
-                throw new HttpException("Couldn't fetch seasonal data", ex.StatusCode.GetValueOrDefault());
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new HttpException("Couldn't fetch events data", ex.StatusCode.GetValueOrDefault());
             }
 
             
             if (result.ResultCode == "OK" && result.Result != null)
             {
-
                 if (result.Result.Total > 0)
                 {   
                     var events = result.Result.Containers.Select(x => new FIAEvent
@@ -222,7 +261,8 @@ namespace F1Interface
         private async Task<FIAEvent> GetEvent(QueryStringBuilder queryBuilder, CancellationToken cancellationToken)
         {
             EventResponse result = null;
-            try {
+            try
+            {
                 string url = queryBuilder.ToString();
                 logger.LogDebug("Requesting season events data using url {Url}", url);
                 HttpResponseMessage response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
@@ -233,14 +273,15 @@ namespace F1Interface
                         .ConfigureAwait(false);
                 }
 
-            } catch (HttpRequestException ex) {
-                throw new HttpException("Couldn't fetch seasonal data", ex.StatusCode.GetValueOrDefault());
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new HttpException("Couldn't fetch event data", ex.StatusCode.GetValueOrDefault());
             }
 
             
             if (result.ResultCode == "OK" && result.Result != null)
             {
-
                 if (result.Result.Total > 0)
                 {
                     var metadata = result.Result.Containers.Where(x => x.Metadata != null)

@@ -15,5 +15,7 @@ namespace F1Interface.Contracts
         Task<FIAEvent> GetEventAsync(uint eventId, string series, CancellationToken cancellationToken = default);
 
         Task<Session> GetContentAsync(ulong contentId, CancellationToken cancellationToken = default);
+
+        Task<Playback> GenerateStreamUrlAsync(ulong contentId, CancellationToken cancellationToken = default);
     }
 }
