@@ -1,14 +1,19 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net5.0</TargetFramework>
+    <PackageId>F1Interface</PackageId>
+    <Version>0.1.0-alpha</Version>
+    <Authors>FlyingWraptor</Authors>
+    <PackageTags>F1,F1TV,F1Interface,Api</PackageTags>
+    <Description>The simple yet effective way to interface with the F1 api to retrieve data regarding the FIA events.</Description>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="PlaywrightSharp" Version="0.191.2"/>
+    <PackageReference Include="PlaywrightSharp" Version="0.191.2" />
   </ItemGroup>
   
   <ItemGroup>
-    <ProjectReference Include="..\F1Interface.Domain\F1Interface.Domain.csproj"/>
+    <ProjectReference Include="..\F1Interface.Domain\F1Interface.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
