@@ -1,13 +1,8 @@
-using System;
 using System.Net;
-using System.Net.Http;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using F1Interface.Contracts;
 using F1Interface.Domain;
-using F1Interface.Domain.Models;
-using F1Interface.Domain.Requests;
 using F1Interface.Domain.Responses;
 using Microsoft.Extensions.Logging;
 using PlaywrightSharp;
@@ -74,7 +69,7 @@ namespace F1Interface
         /// <exception cref="AuthenticationException">Authentication failure exception</exception>
         public async Task<AuthenticationResponse> AuthenticateAsync(IPage page, string login, string password, CancellationToken cancellationToken = default)
         {
-            
+
 #if DEBUG
             logger.LogTrace("Navigating to {Endpoint} to authenticate {User}", Endpoints.LoginPage, login);
 #endif

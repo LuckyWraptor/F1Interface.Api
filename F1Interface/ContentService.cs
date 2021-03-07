@@ -2,14 +2,12 @@ using System;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Json;
-using System.Reflection.Metadata;
 using System.Threading;
 using System.Threading.Tasks;
 using F1Interface.Contracts;
 using F1Interface.Domain;
 using F1Interface.Domain.Extensions;
 using F1Interface.Domain.Models;
-using F1Interface.Domain.Models.Internal;
 using F1Interface.Domain.Responses;
 using Microsoft.Extensions.Logging;
 
