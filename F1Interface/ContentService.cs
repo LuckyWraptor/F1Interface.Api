@@ -169,7 +169,7 @@ namespace F1Interface
             throw new F1InterfaceException("Couldn't parse session, this shouldn't happen!");
         }
 
-        public async Task<Playback> GenerateStreamUrlAsync(ulong contentId, CancellationToken cancellationToken = default)
+        public async Task<Playback> GenerateStreamUrlAsync(ulong contentId, string subscriberToken, CancellationToken cancellationToken = default)
         {
             if (contentId > 0)
             {
@@ -181,7 +181,14 @@ namespace F1Interface
             {
                 string url = $"{Endpoints.F1TV.PlaybackEndpoint}{contentId}";
                 logger.LogDebug("Requesting playback stream url for id {ContentId} at {Url}", contentId);
-                HttpResponseMessage response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                HttpRequestMessage request = new HttpRequestMessage
+                {
+                    Method = HttpMethod.Get,
+                    RequestUri = new Uri(url),
+                };
+                request.Headers.Add("ascendontoken", subscriberToken);
+
+                HttpResponseMessage response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
                     .ConfigureAwait(false);
                 if (response.IsSuccessStatusCode)
                 {
