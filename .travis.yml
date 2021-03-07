@@ -4,10 +4,15 @@ mono: none
 dotnet: 5.0.103
 jobs:
   include:
-    - stage: build
-      script: dotnet build
-    - stage: unit-tests
-      script: dotnet test 
+    - stage: test
+      script:
+        - dotnet test 
+    - stage: nuget-release
+      script:
+        - cd F1Interface/
+        - dotnet pack -c Release -o NuGet/ /p:Version=$TRAVIS_TAG
+        - dotnet nuget push NuGet/F1Interface.*.nupkg -k $NuGetKey --source https://api.nuget.org/v3/index.json
+      if: tag IS present
 stages:
-  - build
   - test
+  - nuget-release
