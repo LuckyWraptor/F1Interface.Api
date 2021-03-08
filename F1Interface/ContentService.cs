@@ -27,14 +27,19 @@ namespace F1Interface
             this.httpClient = httpClient;
         }
 #region Seasons
-        public Task<FIASeason> GetSeasonAsync(uint year, CancellationToken cancellationToken = default)
+        public Task<FIASeason> GetSeasonAsync(uint seasonId, CancellationToken cancellationToken = default)
         {
+            if (seasonId == 0)
+            {
+                throw new ArgumentException("The season id (year) cannot be zero!");
+            }
+
             // Generate request string
             QueryStringBuilder builder = new QueryStringBuilder(Endpoints.F1TV.SearchEndpoint)
                 .AddParameter(Constants.QueryParameters.FilterByType, "Meeting")
                 .AddParameter(Constants.QueryParameters.OrderBy, "meeting_End_Date")
                 .AddParameter(Constants.QueryParameters.SortOrder, "asc")
-                .AddParameter(Constants.QueryParameters.FilterBySeason, year);
+                .AddParameter(Constants.QueryParameters.FilterBySeason, seasonId);
 
             return GetSeason(builder, cancellationToken);
         }
@@ -70,6 +75,11 @@ namespace F1Interface
 
         public Task<FIAEvent> GetEventAsync(uint eventId, CancellationToken cancellationToken = default)
         {
+            if (eventId == 0)
+            {
+                throw new ArgumentException("The event id cannot be zero!");
+            }
+
             // Generate request string
             QueryStringBuilder queryBuilder = new QueryStringBuilder(Endpoints.F1TV.SearchEndpoint)
                 .AddParameter(Constants.QueryParameters.FilterByEvent, eventId)
@@ -80,7 +90,11 @@ namespace F1Interface
         }
         public Task<FIAEvent> GetEventAsync(uint eventId, string series, CancellationToken cancellationToken = default)
         {
-            if (!Constants.Categories.KnownCategories.Contains(series))
+            if (eventId == 0)
+            {
+                throw new ArgumentException("The event id cannot be zero!");
+            }
+            else if (!Constants.Categories.KnownCategories.Contains(series))
             {
                 throw new ArgumentException($"The specified series isn't supported, use one of {string.Join(", ", Constants.Categories.KnownCategories)}");
             }
@@ -133,7 +147,7 @@ namespace F1Interface
                         Id = ulong.Parse(container.Id),
                         Series = container.Properties[0]?.Series,
                         IsLive = container.Metadata.Attributes.IsOnAir,
-                        Testing = container.Metadata.Attributes.IsTestEvent,
+                        Testing = container.Metadata.Attributes.IsTest,
                         EventId = uint.Parse(container.Metadata.Attributes.MeetingKey),
                         Starts = DateTimeUtils.UnixToDateTime(container.Metadata.ContractStartDate),
                         Ends = DateTimeUtils.UnixToDateTime(container.Metadata.ContractEndDate),
@@ -171,7 +185,11 @@ namespace F1Interface
         {
             if (contentId > 0)
             {
-                throw new ArgumentException("The ContentId can't be zero");
+                throw new ArgumentException("The contentId can't be zero");
+            }
+            else if (string.IsNullOrWhiteSpace(subscriberToken))
+            {
+                throw new ArgumentException("The subscriber token must be valid!");
             }
 
             PlaybackResponse result = null;
@@ -299,7 +317,7 @@ namespace F1Interface
                         {
                             Id = ulong.Parse(x.Id),
                             EventId = uint.Parse(x.Metadata.Attributes.MeetingKey),
-                            Testing = x.Metadata.Attributes.IsTestEvent,
+                            Testing = x.Metadata.Attributes.IsTest,
                             Starts = DateTimeUtils.UnixToDateTime(x.Metadata.ContractStartDate),
                             Ends = DateTimeUtils.UnixToDateTime(x.Metadata.ContractEndDate),
                             ImageId = x.Metadata.PictureId
