@@ -8,7 +8,7 @@
             "OS-COMMENT1": "Use IntelliSense to find out which attributes exist for C# debugging",
             "OS-COMMENT2": "Use hover for the description of the existing attributes",
             "OS-COMMENT3": "For further information visit https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md",
-            "name": ".NET Core Launch (console)",
+            "name": ".NET Core Test",
             "type": "coreclr",
             "request": "launch",
             "preLaunchTask": "build",
@@ -25,6 +25,17 @@
             "type": "coreclr",
             "request": "attach",
             "processId": "${command:pickProcess}"
-        }
+        },
+        {
+            "name": ".NET Core Launch TestApp",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-testapp",
+            "program": "${workspaceFolder}/F1Interface.TestApp/bin/Debug/net5.0/F1Interface.TestApp.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/F1Interface.TestApp",
+            "console": "internalConsole",
+            "stopAtEntry": false
+        },
     ]
 }
