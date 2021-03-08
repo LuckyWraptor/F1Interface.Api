@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
 using System.Threading;
@@ -34,12 +35,22 @@ namespace F1Interface
                 throw new ArgumentException("The season id (year) cannot be zero!");
             }
 
-            // Generate request string
+            
             QueryStringBuilder builder = new QueryStringBuilder(Endpoints.F1TV.SearchEndpoint)
-                .AddParameter(Constants.QueryParameters.FilterByType, "Meeting")
-                .AddParameter(Constants.QueryParameters.OrderBy, "meeting_End_Date")
                 .AddParameter(Constants.QueryParameters.SortOrder, "asc")
-                .AddParameter(Constants.QueryParameters.FilterBySeason, seasonId);
+                .AddParameter(Constants.QueryParameters.FilterBySeason, seasonId)
+                .AddParameter(Constants.QueryParameters.FilterOrderDate, "Y");
+            if (seasonId < DateTime.UtcNow.Year)
+            {
+                builder.AddParameter(Constants.QueryParameters.FilterByEvent, "Replay")
+                    .AddParameter(Constants.QueryParameters.OrderBy, "meeting_Number");
+            }
+            else
+            {
+                // Generate request string
+                builder.AddParameter(Constants.QueryParameters.FilterByType, "Meeting")
+                    .AddParameter(Constants.QueryParameters.OrderBy, "meeting_End_Date");
+            }
 
             return GetSeason(builder, cancellationToken);
         }
@@ -55,6 +66,7 @@ namespace F1Interface
                 .AddParameter(Constants.QueryParameters.OrderBy, "meeting_End_Date")
                 .AddParameter(Constants.QueryParameters.SortOrder, "asc")
                 .AddParameter(Constants.QueryParameters.FilterUpcomingEvent, "Y")
+                .AddParameter(Constants.QueryParameters.FilterOrderDate, "Y")
                 .AddParameter(Constants.QueryParameters.FilterBySeason, (uint)DateTime.Now.Year);
 
             return GetEvents(builder, cancellationToken);
@@ -68,43 +80,40 @@ namespace F1Interface
                 .AddParameter(Constants.QueryParameters.OrderBy, "meeting_End_Date")
                 .AddParameter(Constants.QueryParameters.SortOrder, "asc")
                 .AddParameter(Constants.QueryParameters.FilterPastEvent, "Y")
+                .AddParameter(Constants.QueryParameters.FilterOrderDate, "Y")
                 .AddParameter(Constants.QueryParameters.FilterBySeason, (uint)DateTime.Now.Year);
 
             return GetEvents(builder, cancellationToken);
         }
 
         public Task<FIAEvent> GetEventAsync(uint eventId, CancellationToken cancellationToken = default)
-        {
-            if (eventId == 0)
-            {
-                throw new ArgumentException("The event id cannot be zero!");
-            }
+            => GetEventAsync(eventId, null, cancellationToken);
 
-            // Generate request string
-            QueryStringBuilder queryBuilder = new QueryStringBuilder(Endpoints.F1TV.SearchEndpoint)
-                .AddParameter(Constants.QueryParameters.FilterByEvent, eventId)
-                .AddParameter(Constants.QueryParameters.OrderBy, "session_index")
-                .AddParameter(Constants.QueryParameters.SortOrder, "asc");
-
-            return GetEvent(queryBuilder, cancellationToken);
-        }
         public Task<FIAEvent> GetEventAsync(uint eventId, string series, CancellationToken cancellationToken = default)
         {
             if (eventId == 0)
             {
                 throw new ArgumentException("The event id cannot be zero!");
             }
-            else if (!Constants.Categories.KnownCategories.Contains(series))
-            {
-                throw new ArgumentException($"The specified series isn't supported, use one of {string.Join(", ", Constants.Categories.KnownCategories)}");
-            }
 
             // Generate request string
             QueryStringBuilder queryBuilder = new QueryStringBuilder(Endpoints.F1TV.SearchEndpoint)
                 .AddParameter(Constants.QueryParameters.FilterByEvent, eventId)
-                .AddParameter(Constants.QueryParameters.FilterBySeries, series)
                 .AddParameter(Constants.QueryParameters.OrderBy, "session_index")
-                .AddParameter(Constants.QueryParameters.SortOrder, "asc");
+                .AddParameter(Constants.QueryParameters.SortOrder, "asc")
+                .AddParameter(Constants.QueryParameters.FilterOrderDate, "Y");
+
+            if (!string.IsNullOrWhiteSpace(series))
+            {
+                series = series.Trim();
+                if (!Constants.Categories.KnownCategories.Contains(series))
+                {
+                    throw new ArgumentException($"The specified series isn't supported, use one of {string.Join(", ", Constants.Categories.KnownCategories)}");
+                }
+
+                queryBuilder.AddParameter(Constants.QueryParameters.FilterBySeries, series);
+            }
+
 
             return GetEvent(queryBuilder, cancellationToken);
         }
@@ -117,34 +126,19 @@ namespace F1Interface
                 throw new ArgumentException("The contentId can't be zero");
             }
 
-            SeasonResponse result = null;
-            try
-            {
-                string url = Endpoints.F1TV.ContentEndpoint.Replace("{{CONTENT_ID}}", contentId.ToString());
-                logger.LogDebug("Requesting session data for id {ContentId} at {Url}", contentId);
-                HttpResponseMessage response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-                    .ConfigureAwait(false);
-                if (response.IsSuccessStatusCode)
-                {
-                    result = await response.Content.ReadFromJsonAsync<SeasonResponse>()
-                        .ConfigureAwait(false);
-                }
-            }
-            catch (HttpRequestException ex)
-            {
-                throw new HttpException("Couldn't fetch seasonal data", ex.StatusCode.GetValueOrDefault());
-            }
-
-            
-            if (result.ResultCode == "OK" && result.Result != null)
+            string url = Endpoints.F1TV.ContentEndpoint.Replace("{{CONTENT_ID}}", contentId.ToString());
+            SeasonResponse result = await RESTRequestObject<SeasonResponse>(url, cancellationToken);            
+            if (result != null)
             {
 
-                if (result.Result.Total > 0)
+                if (result.ResultCode == "OK" && result.Result != null && result.Result.Total > 0)
                 {   
                     var container = result.Result.Containers[0];
                     Session session = new Session
                     {
                         Id = ulong.Parse(container.Id),
+                        OfficialName = container.Metadata.Title,
+                        Name = container.Metadata.TitleBrief,
                         Series = container.Properties[0]?.Series,
                         IsLive = container.Metadata.Attributes.IsOnAir,
                         Testing = container.Metadata.Attributes.IsTest,
@@ -175,6 +169,10 @@ namespace F1Interface
                     };
 
                     return session;
+                }
+                else
+                {
+                    return null;
                 }
             }
 
@@ -217,11 +215,18 @@ namespace F1Interface
                 throw new HttpException("Couldn't generate the stream url", ex.StatusCode.GetValueOrDefault());
             }
 
-            if (result.ResultCode == "OK" && result.Result != null)
+            if (result != null)
             {
-                result.Result.ContentId = contentId;
+                if (result.ResultCode == "OK" && result.Result != null)
+                {
+                    result.Result.ContentId = contentId;
 
-                return result.Result;
+                    return result.Result;
+                }
+                else
+                {
+                    return null;
+                }
             }
 
             throw new F1InterfaceException("Couldn't parse playback token, this shouldn't happen.");
@@ -231,33 +236,15 @@ namespace F1Interface
 #region Private logic
         private async Task<FIAEvent[]> GetEvents(QueryStringBuilder queryBuilder, CancellationToken cancellationToken)
         {
-            SeasonResponse result = null;
-            try
-            {
-                string url = queryBuilder.ToString();
-                logger.LogDebug("Requesting season events data using url {Url}", url);
-                HttpResponseMessage response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-                    .ConfigureAwait(false);
-                if (response.IsSuccessStatusCode)
-                {
-                    result = await response.Content.ReadFromJsonAsync<SeasonResponse>()
-                        .ConfigureAwait(false);
-                }
+            SeasonResponse result = await RESTRequestObject<SeasonResponse>(queryBuilder, cancellationToken);
 
-            }
-            catch (HttpRequestException ex)
+            if (result != null)
             {
-                throw new HttpException("Couldn't fetch events data", ex.StatusCode.GetValueOrDefault());
-            }
-
-            
-            if (result.ResultCode == "OK" && result.Result != null)
-            {
-                if (result.Result.Total > 0)
+                if (result.ResultCode == "OK" && result.Result != null && result.Result.Total > 0)
                 {   
                     var events = result.Result.Containers.Select(x => new FIAEvent
                     {
-                        Id = uint.Parse(x.Id),
+                        Id = uint.Parse(x.Metadata.Attributes.MeetingKey),
                         Name = x.Metadata.TitleBrief,
                         OfficialName = x.Metadata.Title,
                         SeasonId = x.Metadata.Season,
@@ -275,6 +262,10 @@ namespace F1Interface
 
                     return events;
                 }
+                else
+                {
+                    return null;
+                }
             }
             
             
@@ -283,31 +274,14 @@ namespace F1Interface
         
         private async Task<FIAEvent> GetEvent(QueryStringBuilder queryBuilder, CancellationToken cancellationToken)
         {
-            EventResponse result = null;
-            try
+            EventResponse result = await RESTRequestObject<EventResponse>(queryBuilder, cancellationToken);
+                        
+            if (result != null)
             {
-                string url = queryBuilder.ToString();
-                logger.LogDebug("Requesting season events data using url {Url}", url);
-                HttpResponseMessage response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
-                    .ConfigureAwait(false);
-                if (response.IsSuccessStatusCode)
+                if (result.ResultCode == "OK" && result.Result != null && result.Result.Total > 0)
                 {
-                    result = await response.Content.ReadFromJsonAsync<EventResponse>()
-                        .ConfigureAwait(false);
-                }
-
-            }
-            catch (HttpRequestException ex)
-            {
-                throw new HttpException("Couldn't fetch event data", ex.StatusCode.GetValueOrDefault());
-            }
-
-            
-            if (result.ResultCode == "OK" && result.Result != null)
-            {
-                if (result.Result.Total > 0)
-                {
-                    var metadata = result.Result.Containers.Where(x => x.Metadata != null)
+                    var metadata = result.Result.Containers.Where(x => x.Metadata != null && x.Metadata.Attributes != null && x.Metadata.Attributes.MeetingKey != string.Empty)
+                        .OrderByDescending(x => x.Metadata.Attributes.MeetingStarts)
                         .Select(x => x.Metadata)
                         .FirstOrDefault();
 
@@ -316,6 +290,8 @@ namespace F1Interface
                         Sessions = result.Result.Containers.Select(x => new Session
                         {
                             Id = ulong.Parse(x.Id),
+                            OfficialName = x.Metadata.Title,
+                            Name = x.Metadata.TitleBrief,
                             EventId = uint.Parse(x.Metadata.Attributes.MeetingKey),
                             Testing = x.Metadata.Attributes.IsTest,
                             Starts = DateTimeUtils.UnixToDateTime(x.Metadata.ContractStartDate),
@@ -334,6 +310,10 @@ namespace F1Interface
                     fiaEvent.Ends = metadata.Attributes.MeetingEnds;
 
                     return fiaEvent;
+                }
+                else
+                {
+                    return null;
                 }
             }
             
@@ -354,6 +334,31 @@ namespace F1Interface
             };
 
             return season;
+        }
+
+        private Task<T> RESTRequestObject<T>(QueryStringBuilder queryBuilder, CancellationToken cancellationToken) where T : class
+            => RESTRequestObject<T>(queryBuilder.ToString(), cancellationToken);
+
+        private async Task<T> RESTRequestObject<T>(string url, CancellationToken cancellationToken) where T : class
+        {
+            T result = null;
+            try
+            {
+                logger.LogDebug("Requesting content data using url {Url}", url);
+                HttpResponseMessage response = await httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken)
+                    .ConfigureAwait(false);
+                if (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.NotFound)
+                {
+                    result = await response.Content.ReadFromJsonAsync<T>(null, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+            }
+            catch (HttpRequestException ex)
+            {
+                throw new HttpException("Couldn't fetch content data", ex.StatusCode.GetValueOrDefault());
+            }
+
+            return result;
         }
 #endregion
     }

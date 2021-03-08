@@ -9,6 +9,8 @@ namespace F1Interface.Domain.Models
     public class Session
     {
         public ulong Id { get; set; }
+        public string Name { get; set; }
+        public string OfficialName { get; set; }
         public string ImageId { get; set; }
         public string Series { get; set; }
         public uint EventId { get; set; }
