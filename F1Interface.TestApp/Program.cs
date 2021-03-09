@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net.Http;
 using System.Threading.Tasks;
-using F1Interface.Contracts;
 using Microsoft.Extensions.Logging;
 using Moq;
 
@@ -32,10 +31,18 @@ namespace F1Interface.TestApp
         {
             try
             {
+                await contentService.GetSeasonAsync(2018);
                 await contentService.GetSeasonAsync(2020);
-                // await contentService.GetCurrentSeasonAsync();
+                await contentService.GetSeasonAsync(2021);
+                await contentService.GetCurrentSeasonAsync();
+                await contentService.GetUpcomingEventsAsync();
+                await contentService.GetPastEventsAsync();
+
+                await contentService.GetEventAsync(1043);
+
+                await contentService.GetContentAsync(1000000823);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 throw;
             }

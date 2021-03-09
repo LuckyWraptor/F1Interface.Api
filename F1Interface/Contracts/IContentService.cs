@@ -48,12 +48,23 @@ namespace F1Interface.Contracts
         /// Retrieve specific event details and the containing planned sessions, filtered by a series
         /// </summary>
         /// <param name="eventId">Event identifier</param>
-        /// <param name="series">Series identiier</param>
+        /// <param name="series">Series identifier</param>
         /// <exception cref="System.ArgumentException">If the eventId is zero</exception>
         /// <exception cref="System.ArgumentException">If the series isn't recognised</exception>
         /// <exception cref="F1Interface.Domain.HttpException">When a http response error ocurred</exception>
         /// <returns>The requested FIAEvent containing all planned sessions for a specific series</returns>
         Task<FIAEvent> GetEventAsync(uint eventId, string series, CancellationToken cancellationToken = default);
+        /// <summary>
+        /// Retrieve specific event details and the containing planned sessions, filtered by a series
+        /// </summary>
+        /// <param name="eventId">Event identifier</param>
+        /// <param name="series">Series identifier</param>
+        /// <param name="contentType">Type of content to pull</param>
+        /// <exception cref="System.ArgumentException">If the eventId is zero</exception>
+        /// <exception cref="System.ArgumentException">If the series isn't recognised</exception>
+        /// <exception cref="F1Interface.Domain.HttpException">When a http response error ocurred</exception>
+        /// <returns>The requested FIAEvent containing all planned sessions for a specific series</returns>
+        Task<FIAEvent> GetEventAsync(uint eventId, string series, ContentType contentType, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Retrieve content information

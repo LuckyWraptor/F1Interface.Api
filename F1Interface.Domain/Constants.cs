@@ -20,15 +20,16 @@ namespace F1Interface.Domain
             public const string FilterOrderDate = "filter_orderByFom";
             public const string FilterPastEvent = "filter_meetingsPast";
             public const string FilterUpcomingEvent = "filter_meetingsUpcoming";
+            public const string FilterFetchAll = "filter_fetchAll";
             public const string OrderBy = "orderBy";
             public const string SortOrder = "sortOrder";
         }
 
         public static class Categories
         {
-            public const string F1 = "F1";
-            public const string F2 = "F2";
-            public const string F3 = "F3";
+            public const string F1 = "FORMULA 1";
+            public const string F2 = "FORMULA 2";
+            public const string F3 = "FORMULA 3";
             public const string PorscheSupercup = "PORSCHE";
 
             public static readonly string[] KnownCategories = new[]

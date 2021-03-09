@@ -9,6 +9,7 @@ using F1Interface.Contracts;
 using F1Interface.Domain;
 using F1Interface.Domain.Extensions;
 using F1Interface.Domain.Models;
+using F1Interface.Domain.Models.Internal;
 using F1Interface.Domain.Responses;
 using Microsoft.Extensions.Logging;
 
@@ -35,21 +36,21 @@ namespace F1Interface
                 throw new ArgumentException("The season id (year) cannot be zero!");
             }
 
-            
+            // Generate request string
             QueryStringBuilder builder = new QueryStringBuilder(Endpoints.F1TV.SearchEndpoint)
                 .AddParameter(Constants.QueryParameters.SortOrder, "asc")
                 .AddParameter(Constants.QueryParameters.FilterBySeason, seasonId)
-                .AddParameter(Constants.QueryParameters.FilterOrderDate, "Y");
-            if (seasonId < DateTime.UtcNow.Year)
+                .AddParameter(Constants.QueryParameters.FilterOrderDate, "Y")
+                .AddParameter(Constants.QueryParameters.FilterFetchAll, "Y");
+            if (seasonId > 2017) // Content pre 2017 doesn't use the 'Meeting' system
             {
-                builder.AddParameter(Constants.QueryParameters.FilterByEvent, "Replay")
-                    .AddParameter(Constants.QueryParameters.OrderBy, "meeting_Number");
+                builder.AddParameter(Constants.QueryParameters.FilterByType, ContentParser.TypeToString(ContentType.Meeting))
+                    .AddParameter(Constants.QueryParameters.OrderBy, "meeting_End_Date");
             }
             else
             {
-                // Generate request string
-                builder.AddParameter(Constants.QueryParameters.FilterByType, "Meeting")
-                    .AddParameter(Constants.QueryParameters.OrderBy, "meeting_End_Date");
+                builder.AddParameter(Constants.QueryParameters.FilterByType, ContentParser.TypeToString(ContentType.Replay))
+                    .AddParameter(Constants.QueryParameters.OrderBy, "meeting_Number");
             }
 
             return GetSeason(builder, cancellationToken);
@@ -62,7 +63,7 @@ namespace F1Interface
         {
             // Generate request string
             QueryStringBuilder builder = new QueryStringBuilder(Endpoints.F1TV.SearchEndpoint)
-                .AddParameter(Constants.QueryParameters.FilterByType, "Meeting")
+                .AddParameter(Constants.QueryParameters.FilterByType, ContentParser.TypeToString(ContentType.Meeting))
                 .AddParameter(Constants.QueryParameters.OrderBy, "meeting_End_Date")
                 .AddParameter(Constants.QueryParameters.SortOrder, "asc")
                 .AddParameter(Constants.QueryParameters.FilterUpcomingEvent, "Y")
@@ -76,7 +77,7 @@ namespace F1Interface
         {
             // Generate request string
             QueryStringBuilder builder = new QueryStringBuilder(Endpoints.F1TV.SearchEndpoint)
-                .AddParameter(Constants.QueryParameters.FilterByType, "Meeting")
+                .AddParameter(Constants.QueryParameters.FilterByType, ContentParser.TypeToString(ContentType.Meeting))
                 .AddParameter(Constants.QueryParameters.OrderBy, "meeting_End_Date")
                 .AddParameter(Constants.QueryParameters.SortOrder, "asc")
                 .AddParameter(Constants.QueryParameters.FilterPastEvent, "Y")
@@ -87,9 +88,12 @@ namespace F1Interface
         }
 
         public Task<FIAEvent> GetEventAsync(uint eventId, CancellationToken cancellationToken = default)
-            => GetEventAsync(eventId, null, cancellationToken);
+            => GetEventAsync(eventId, null, ContentType.Unknown, cancellationToken);
 
         public Task<FIAEvent> GetEventAsync(uint eventId, string series, CancellationToken cancellationToken = default)
+            => GetEventAsync(eventId, series, ContentType.Unknown, cancellationToken);
+
+        public Task<FIAEvent> GetEventAsync(uint eventId, string series, ContentType contentType, CancellationToken cancellationToken = default)
         {
             if (eventId == 0)
             {
@@ -105,7 +109,7 @@ namespace F1Interface
 
             if (!string.IsNullOrWhiteSpace(series))
             {
-                series = series.Trim();
+                series = series.Trim().ToUpper();
                 if (!Constants.Categories.KnownCategories.Contains(series))
                 {
                     throw new ArgumentException($"The specified series isn't supported, use one of {string.Join(", ", Constants.Categories.KnownCategories)}");
@@ -114,6 +118,11 @@ namespace F1Interface
                 queryBuilder.AddParameter(Constants.QueryParameters.FilterBySeries, series);
             }
 
+            if (contentType != ContentType.Unknown)
+            {
+                string contentTypeString = ContentParser.TypeToString(contentType);
+                queryBuilder.AddParameter(Constants.QueryParameters.FilterByType, contentTypeString); 
+            }
 
             return GetEvent(queryBuilder, cancellationToken);
         }
@@ -133,41 +142,8 @@ namespace F1Interface
 
                 if (result.ResultCode == "OK" && result.Result != null && result.Result.Total > 0)
                 {   
-                    var container = result.Result.Containers[0];
-                    Session session = new Session
-                    {
-                        Id = ulong.Parse(container.Id),
-                        OfficialName = container.Metadata.Title,
-                        Name = container.Metadata.TitleBrief,
-                        Series = container.Properties[0]?.Series,
-                        IsLive = container.Metadata.Attributes.IsOnAir,
-                        Testing = container.Metadata.Attributes.IsTest,
-                        EventId = uint.Parse(container.Metadata.Attributes.MeetingKey),
-                        Starts = DateTimeUtils.UnixToDateTime(container.Metadata.ContractStartDate),
-                        Ends = DateTimeUtils.UnixToDateTime(container.Metadata.ContractEndDate),
-                        ImageId = container.Metadata.PictureId,
-                    };
-
-                    var attributes = container.Metadata.Attributes;
-                    session.Event = new FIAEvent
-                    {
-                        Id = uint.Parse(attributes.MeetingKey),
-                        Name = attributes.MeetingName,
-                        OfficialName = attributes.MeetingOfficialName,
-                        SeasonId = container.Metadata.Season,
-                        Sponsor = attributes.MeetingSponsor,
-                        Starts = attributes.MeetingStarts,
-                        Ends = attributes.MeetingEnds,
-
-                        Circuit = new Circuit
-                        {
-                            Id = attributes.CircuitKey,
-                            Location = attributes.MeetingLocation,
-                            Name = attributes.CircuitShortName,
-                            OfficialName = attributes.CircuitShortName
-                        }
-                    };
-
+                    Session session = ParseSession(result.Result.Containers[0]);
+                    session.Event = ParseEvent(result.Result.Containers[0].Metadata);
                     return session;
                 }
                 else
@@ -242,23 +218,8 @@ namespace F1Interface
             {
                 if (result.ResultCode == "OK" && result.Result != null && result.Result.Total > 0)
                 {   
-                    var events = result.Result.Containers.Select(x => new FIAEvent
-                    {
-                        Id = uint.Parse(x.Metadata.Attributes.MeetingKey),
-                        Name = x.Metadata.TitleBrief,
-                        OfficialName = x.Metadata.Title,
-                        SeasonId = x.Metadata.Season,
-                        Sponsor = x.Metadata.Attributes.MeetingSponsor,
-                        Circuit = new Circuit
-                        {
-                            Id = x.Metadata.Attributes.CircuitKey,
-                            Location = x.Metadata.Attributes.CircuitLocation,
-                            Name = x.Metadata.Attributes.CircuitShortName,
-                            OfficialName = x.Metadata.Attributes.CircuitOfficialName
-                        },
-                        Starts = x.Metadata.Attributes.MeetingStarts,
-                        Ends = x.Metadata.Attributes.MeetingEnds
-                    }).ToArray();
+                    var events = result.Result.Containers.Select(x => ParseEvent(x.Metadata))
+                        .ToArray();
 
                     return events;
                 }
@@ -282,32 +243,13 @@ namespace F1Interface
                 {
                     var metadata = result.Result.Containers.Where(x => x.Metadata != null && x.Metadata.Attributes != null && x.Metadata.Attributes.MeetingKey != string.Empty)
                         .OrderByDescending(x => x.Metadata.Attributes.MeetingStarts)
+                        .ThenByDescending(x => x.Metadata.Attributes.MeetingEnds)
                         .Select(x => x.Metadata)
                         .FirstOrDefault();
 
-                    FIAEvent fiaEvent = new FIAEvent
-                    {
-                        Sessions = result.Result.Containers.Select(x => new Session
-                        {
-                            Id = ulong.Parse(x.Id),
-                            OfficialName = x.Metadata.Title,
-                            Name = x.Metadata.TitleBrief,
-                            EventId = uint.Parse(x.Metadata.Attributes.MeetingKey),
-                            Testing = x.Metadata.Attributes.IsTest,
-                            Starts = DateTimeUtils.UnixToDateTime(x.Metadata.ContractStartDate),
-                            Ends = DateTimeUtils.UnixToDateTime(x.Metadata.ContractEndDate),
-                            ImageId = x.Metadata.PictureId
-                        }).ToArray()
-                    };
-
-                    
-                    fiaEvent.Id = uint.Parse(metadata.Attributes.MeetingKey);
-                    fiaEvent.Name = metadata.Attributes.MeetingName;
-                    fiaEvent.OfficialName = metadata.Attributes.MeetingOfficialName;
-                    fiaEvent.Sponsor = metadata.Attributes.MeetingSponsor;
-                    fiaEvent.SeasonId = metadata.Season;
-                    fiaEvent.Starts = metadata.Attributes.MeetingStarts;
-                    fiaEvent.Ends = metadata.Attributes.MeetingEnds;
+                    FIAEvent fiaEvent = ParseEvent(metadata);
+                    fiaEvent.Sessions = result.Result.Containers.Select(x => ParseSession(x))
+                        .ToArray();
 
                     return fiaEvent;
                 }
@@ -328,12 +270,53 @@ namespace F1Interface
             FIASeason season = new FIASeason
             {
                 Events = events,
-                Season = events.Where(x => x.SeasonId > 0)
+                Season = events?.Where(x => x.SeasonId > 0)
                     .Select(x => x.SeasonId)
-                    .FirstOrDefault()
+                    .FirstOrDefault() ?? 0
             };
 
             return season;
+        }
+        private FIAEvent ParseEvent(EventMetadata metadata)
+            => new FIAEvent
+            {
+                Id = uint.Parse(metadata.Attributes.MeetingKey),
+                Name = metadata.Attributes.MeetingName,
+                OfficialName = metadata.Attributes.MeetingOfficialName,
+                SeasonId = metadata.Season,
+                Sponsor = metadata.Attributes.MeetingSponsor,
+                Starts = metadata.Attributes.MeetingStarts,
+                Ends = metadata.Attributes.MeetingEnds,
+
+                Circuit = new Circuit
+                {
+                    Id = metadata.Attributes.CircuitKey,
+                    Location = metadata.Attributes.MeetingLocation,
+                    Name = metadata.Attributes.CircuitShortName,
+                    OfficialName = metadata.Attributes.CircuitShortName
+                }
+            };
+
+        private Session ParseSession(Event rawEvent)
+        {
+            EventMetadata metadata = rawEvent.Metadata;
+            Session session = new Session
+            {
+                Id = ulong.Parse(rawEvent.Id),
+                OfficialName = metadata.Title,
+                Name = metadata.TitleBrief,
+                EventId = uint.Parse(metadata.Attributes.MeetingKey),
+                Testing = metadata.Attributes.IsTest,
+                IsLive = metadata.Attributes.IsOnAir,
+                Starts = DateTimeUtils.UnixToDateTime(metadata.ContractStartDate),
+                Ends = DateTimeUtils.UnixToDateTime(metadata.ContractEndDate),
+                ImageId = metadata.PictureId,
+                Series = rawEvent.Properties[0]?.Series,
+                Type = ContentParser.DetermineType(metadata.ContentSubtype),
+                Duration = metadata.Duration
+            };
+
+            return session;
         }
 
         private Task<T> RESTRequestObject<T>(QueryStringBuilder queryBuilder, CancellationToken cancellationToken) where T : class

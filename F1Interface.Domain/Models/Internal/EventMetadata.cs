@@ -13,6 +13,7 @@ namespace F1Interface.Domain.Models.Internal
         public ulong ContractStartDate { get; set; }
         public ulong Duration { get; set; }
         public string ExternalId { get; set; }
+        public string Entitlement { get; set; }
         public string[] Genres { get; set; }
         public string Language { get; set; }
         public string LongDescription { get; set; }
