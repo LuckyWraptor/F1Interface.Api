@@ -16,7 +16,7 @@ namespace F1Interface.Domain
             public const string Suffix = "/F1_TV_Pro_Annual/12";
             public const string SearchEndpoint = Api + "ALL/PAGE/SEARCH/VOD" + Suffix;
             public const string ContentEndpoint = Api + "ALL/CONTENT/VIDEO/{{CONTENT_ID}}" + Suffix;
-            public const string PlaybackEndpoint = Api + "ALL/CONTENT/PLAY?contentId={{CONTENT_ID}}";
+            public const string PlaybackEndpoint = "https://f1tv.formula1.com/1.0/R/ENG/WEB_HLS/ALL/CONTENT/PLAY";
         }
     }
 }

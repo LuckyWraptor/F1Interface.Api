@@ -19,6 +19,6 @@ namespace F1Interface.Domain.Models
 
         public Circuit Circuit { get; set; }
 
-        public Session[] Sessions { get; set; }
+        public FIASession[] Sessions { get; set; }
     }
 }

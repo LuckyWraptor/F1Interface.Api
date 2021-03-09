@@ -6,6 +6,7 @@
 
   <ItemGroup>
     <PackageReference Include="Moq" Version="4.16.1" />
+    <PackageReference Include="PlaywrightSharp" Version="0.191.2" />
   </ItemGroup>
 
   <PropertyGroup>

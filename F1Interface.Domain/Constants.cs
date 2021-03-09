@@ -13,6 +13,8 @@ namespace F1Interface.Domain
 
         public static class QueryParameters
         {
+            public const string ChannelId = "channelId";
+            public const string ContentId = "contentId";
             public const string FilterByEvent = "filter_MeetingKey";
             public const string FilterBySeason = "filter_season";
             public const string FilterBySeries = "filter_Series";

@@ -76,7 +76,7 @@ namespace F1Interface.Contracts
         /// <exception cref="System.ArgumentException">If the contentId is zero</exception>
         /// <exception cref="F1Interface.Domain.HttpException">When a http response error ocurred</exception>
         /// <returns>A Session instance containging the content details</returns>
-        Task<Session> GetContentAsync(ulong contentId, CancellationToken cancellationToken = default);
+        Task<FIASession> GetContentAsync(ulong contentId, CancellationToken cancellationToken = default);
         /// <summary>
         /// Generate a stream url based on a content id and a subscriber token
         /// </summary>
@@ -87,5 +87,16 @@ namespace F1Interface.Contracts
         /// <exception cref="F1Interface.Domain.HttpException">When a http response error ocurred</exception>
         /// <returns>A playback object containing the stream url</returns>
         Task<Playback> GenerateStreamUrlAsync(ulong contentId, string subscriberToken, CancellationToken cancellationToken = default);
+        /// <summary>
+        /// Generate a stream url based on a content id and a subscriber token
+        /// </summary>
+        /// <param name="contentId">Content identifier</param>
+        /// <param name="channelId">Channel identifier, 0 means main content</param>
+        /// <param name="subscriberToken">Subscriber token string (must be valid)</param>
+        /// <exception cref="System.ArgumentException">If the contentId is zero</exception>
+        /// <exception cref="System.ArgumentException">If the subsriberToken is invalid</exception>
+        /// <exception cref="F1Interface.Domain.HttpException">When a http response error ocurred</exception>
+        /// <returns>A playback object containing the stream url</returns>
+        Task<Playback> GenerateStreamUrlAsync(ulong contentId, uint channelId, string subscriberToken, CancellationToken cancellationToken = default);
     }
 }

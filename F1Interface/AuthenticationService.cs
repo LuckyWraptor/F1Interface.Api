@@ -1,3 +1,4 @@
+using System;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -77,11 +78,13 @@ namespace F1Interface
                 .ConfigureAwait(false);
 
             logger.LogTrace("Navigated to page {Endpoint} to authenticate {User}", Endpoints.LoginPage, login);
-
             await RandomDelay(cancellationToken)
                 .ConfigureAwait(false);
-            await ClickButtonAsync(page, ConsentButtonSelector)
-                .ConfigureAwait(false);
+            Task waitTask = page.WaitForNavigationAsync(LifecycleEvent.DOMContentLoaded, 5000);
+            Task clickTask = ClickButtonAsync(page, ConsentButtonSelector);
+            Task.WaitAll(waitTask, clickTask);
+
+            await page.WaitForSelectorAsync("#loginform");
 
             await RandomDelay(cancellationToken)
                 .ConfigureAwait(false);
@@ -93,33 +96,30 @@ namespace F1Interface
             await TypeAsync(page, PasswordSelector, password, cancellationToken)
                 .ConfigureAwait(false);
 
-            await RandomDelay(cancellationToken)
-                .ConfigureAwait(false);
-            Task<IResponse> responseTask = page.WaitForResponseAsync(Endpoints.AuthenticationByPassword);
-            Task clickTask = ClickButtonAsync(page, LoginButtonSelector);
+            Task<IResponse> responseTask = page.WaitForResponseAsync(Endpoints.AuthenticationByPassword, 15000);
+            await ClickButtonAsync(page, LoginButtonSelector);
+            
 #if DEBUG
             logger.LogTrace("Awaiting click & response");
 #endif
-
-            Task.WaitAll(responseTask, clickTask);
+            IResponse response = await responseTask;
 #if DEBUG
             logger.LogDebug("Response received for {Endpoint}", Endpoints.AuthenticationByPassword);
 #endif
-
-            switch (responseTask.Result.Status)
+            switch (response.Status)
             {
                 case HttpStatusCode.OK:
-                    AuthenticationResponse response = await responseTask.Result.GetJsonAsync<AuthenticationResponse>()
+                    AuthenticationResponse authResponse = await response.GetJsonAsync<AuthenticationResponse>()
                                 .ConfigureAwait(false);
-                    if (response != null && response.Session != null && !string.IsNullOrWhiteSpace(response.Session.Token))
+                    if (authResponse != null && authResponse.Session != null && !string.IsNullOrWhiteSpace(authResponse.Session.Token))
                     {
                         logger.LogInformation("Authenticated {User} successfully.", login);
-                        return response;
+                        return authResponse;
                     }
 
                     throw new HttpException("Authentication failed as an invalid/incomprehensive response was retrieved.", HttpStatusCode.Forbidden);
                 case HttpStatusCode.Unauthorized:
-                    throw new HttpException("Invalid credentials provided.", responseTask.Result.Status);
+                    throw new HttpException("Invalid credentials provided.", response.Status);
             }
 
             throw new F1InterfaceException("Unhandled response (this shouldn't happen!)");

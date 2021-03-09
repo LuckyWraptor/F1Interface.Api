@@ -128,7 +128,7 @@ namespace F1Interface
         }
 #endregion
 #region Content
-        public async Task<Session> GetContentAsync(ulong contentId, CancellationToken cancellationToken = default)
+        public async Task<FIASession> GetContentAsync(ulong contentId, CancellationToken cancellationToken = default)
         {
             if (contentId == 0)
             {
@@ -136,14 +136,34 @@ namespace F1Interface
             }
 
             string url = Endpoints.F1TV.ContentEndpoint.Replace("{{CONTENT_ID}}", contentId.ToString());
-            SeasonResponse result = await RESTRequestObject<SeasonResponse>(url, cancellationToken);            
+            SessionResponse result = await RESTRequestObject<SessionResponse>(url, cancellationToken);            
             if (result != null)
             {
 
                 if (result.ResultCode == "OK" && result.Result != null && result.Result.Total > 0)
-                {   
-                    Session session = ParseSession(result.Result.Containers[0]);
-                    session.Event = ParseEvent(result.Result.Containers[0].Metadata);
+                {
+                    Session rawSession = result.Result.Containers[0];
+                    SessionMetadata metadata = rawSession.Metadata;
+                    FIASession session = new FIASession
+                    {
+                        Id = rawSession.Id,
+                        OfficialName = metadata.Title,
+                        Name = metadata.TitleBrief,
+                        EventId = uint.Parse(metadata.Attributes.MeetingKey),
+                        Testing = metadata.Attributes.IsTest,
+                        Available = metadata.Attributes.IsOnAir,
+                        Starts = DateTimeUtils.UnixToDateTime(metadata.ContractStartDate),
+                        Ends = DateTimeUtils.UnixToDateTime(metadata.ContractEndDate),
+                        ImageId = metadata.PictureId,
+                        Series = rawSession.Properties[0]?.Series,
+                        Type = ContentParser.DetermineType(metadata.ContentSubtype),
+                        Duration = metadata.Duration,
+                        Temporary = metadata.LeavingSoon,
+                        Drivers = metadata.Actors,
+                        Teams = metadata.Directors,
+                        SideChannels = metadata.AdditionalStreams
+                    };
+                    session.Event = ParseEvent(metadata);
                     return session;
                 }
                 else
@@ -154,10 +174,11 @@ namespace F1Interface
 
             throw new F1InterfaceException("Couldn't parse session, this shouldn't happen!");
         }
-
-        public async Task<Playback> GenerateStreamUrlAsync(ulong contentId, string subscriberToken, CancellationToken cancellationToken = default)
+        public Task<Playback> GenerateStreamUrlAsync(ulong contentId, string subscriberToken, CancellationToken cancellationToken = default)
+            => GenerateStreamUrlAsync(contentId, 0, subscriberToken, cancellationToken);
+        public async Task<Playback> GenerateStreamUrlAsync(ulong contentId, uint channelId, string subscriberToken, CancellationToken cancellationToken = default)
         {
-            if (contentId > 0)
+            if (contentId == 0)
             {
                 throw new ArgumentException("The contentId can't be zero");
             }
@@ -166,11 +187,19 @@ namespace F1Interface
                 throw new ArgumentException("The subscriber token must be valid!");
             }
 
+            QueryStringBuilder queryBuilder = new QueryStringBuilder(Endpoints.F1TV.PlaybackEndpoint);
+                queryBuilder.AddParameter(Constants.QueryParameters.ContentId, contentId);
+
+            if (channelId > 0)
+            {
+                queryBuilder.AddParameter(Constants.QueryParameters.ChannelId, channelId);
+            }
+
             PlaybackResponse result = null;
             try
             {
-                string url = $"{Endpoints.F1TV.PlaybackEndpoint}{contentId}";
-                logger.LogDebug("Requesting playback stream url for id {ContentId} at {Url}", contentId);
+                string url = queryBuilder.ToString();
+                logger.LogDebug("Requesting playback stream url for id {ContentId} at {Url}", contentId, url);
                 HttpRequestMessage request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Get,
@@ -241,7 +270,9 @@ namespace F1Interface
             {
                 if (result.ResultCode == "OK" && result.Result != null && result.Result.Total > 0)
                 {
-                    var metadata = result.Result.Containers.Where(x => x.Metadata != null && x.Metadata.Attributes != null && x.Metadata.Attributes.MeetingKey != string.Empty)
+                    var metadata = result.Result.Containers.Where(x => x.Metadata != null
+                            && x.Metadata.Attributes != null
+                            && x.Metadata.Attributes.MeetingKey != string.Empty)
                         .OrderByDescending(x => x.Metadata.Attributes.MeetingStarts)
                         .ThenByDescending(x => x.Metadata.Attributes.MeetingEnds)
                         .Select(x => x.Metadata)
@@ -297,17 +328,17 @@ namespace F1Interface
                 }
             };
 
-        private Session ParseSession(Event rawEvent)
+        private FIASession ParseSession(Event rawEvent)
         {
             EventMetadata metadata = rawEvent.Metadata;
-            Session session = new Session
+            FIASession session = new FIASession
             {
-                Id = ulong.Parse(rawEvent.Id),
+                Id = rawEvent.Id,
                 OfficialName = metadata.Title,
                 Name = metadata.TitleBrief,
                 EventId = uint.Parse(metadata.Attributes.MeetingKey),
                 Testing = metadata.Attributes.IsTest,
-                IsLive = metadata.Attributes.IsOnAir,
+                Available = metadata.Attributes.IsOnAir,
                 Starts = DateTimeUtils.UnixToDateTime(metadata.ContractStartDate),
                 Ends = DateTimeUtils.UnixToDateTime(metadata.ContractEndDate),
                 ImageId = metadata.PictureId,
