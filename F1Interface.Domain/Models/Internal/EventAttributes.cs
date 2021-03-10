@@ -4,8 +4,7 @@ namespace F1Interface.Domain.Models.Internal
 {
     internal class EventAttributes : MeetingAttributes
     {
-        [JsonPropertyName("CircuitKey")]
-        public uint CircuitKey { get; set; }
+        public uint CircuitId { get; private set; }
         [JsonPropertyName("Circuit_Location")]
         public string CircuitLocation { get; set; }
         [JsonPropertyName("Circuit_Official_Name")]
@@ -18,12 +17,24 @@ namespace F1Interface.Domain.Models.Internal
         [JsonPropertyName("IsTestEvent")]
         public string TestEventChecker
         {
-            get => IsTest.ToString();
             set
             {
                 if (!string.IsNullOrWhiteSpace(value))
                 {
                     IsTest = bool.Parse(value);
+                }
+            }
+        }
+
+        
+        [JsonPropertyName("CircuitKey")]
+        public string CircuitKeyChecker
+        {
+            set
+            {
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    CircuitId = uint.Parse(value);
                 }
             }
         }

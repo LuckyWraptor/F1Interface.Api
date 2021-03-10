@@ -36,6 +36,7 @@ namespace F1Interface.TestApp
 
         public static async Task DoTests()
         {
+            await contentService.GetSeasonAsync(2017);
             await contentService.GetSeasonAsync(2018);
             await contentService.GetSeasonAsync(2020);
             await contentService.GetSeasonAsync(2021);

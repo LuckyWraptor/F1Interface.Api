@@ -39,18 +39,18 @@ namespace F1Interface
             // Generate request string
             QueryStringBuilder builder = new QueryStringBuilder(Endpoints.F1TV.SearchEndpoint)
                 .AddParameter(Constants.QueryParameters.SortOrder, "asc")
-                .AddParameter(Constants.QueryParameters.FilterBySeason, seasonId)
                 .AddParameter(Constants.QueryParameters.FilterOrderDate, "Y")
                 .AddParameter(Constants.QueryParameters.FilterFetchAll, "Y");
-            if (seasonId > 2017) // Content pre 2017 doesn't use the 'Meeting' system
+            if (seasonId > 2017)
             {
                 builder.AddParameter(Constants.QueryParameters.FilterByType, ContentParser.TypeToString(ContentType.Meeting))
-                    .AddParameter(Constants.QueryParameters.OrderBy, "meeting_End_Date");
+                    .AddParameter(Constants.QueryParameters.OrderBy, "meeting_End_Date")
+                    .AddParameter(Constants.QueryParameters.FilterBySeason, seasonId);
             }
             else
             {
-                builder.AddParameter(Constants.QueryParameters.FilterByType, ContentParser.TypeToString(ContentType.Replay))
-                    .AddParameter(Constants.QueryParameters.OrderBy, "meeting_Number");
+                builder.AddParameter(Constants.QueryParameters.OrderBy, "meeting_Number")
+                    .AddParameter(Constants.QueryParameters.FilterByYear, seasonId);
             }
 
             return GetSeason(builder, cancellationToken);
@@ -88,10 +88,10 @@ namespace F1Interface
         }
 
         public Task<FIAEvent> GetEventAsync(uint eventId, CancellationToken cancellationToken = default)
-            => GetEventAsync(eventId, null, ContentType.Unknown, cancellationToken);
+            => GetEventAsync(eventId, null, ContentType.Unspecified, cancellationToken);
 
         public Task<FIAEvent> GetEventAsync(uint eventId, string series, CancellationToken cancellationToken = default)
-            => GetEventAsync(eventId, series, ContentType.Unknown, cancellationToken);
+            => GetEventAsync(eventId, series, ContentType.Unspecified, cancellationToken);
 
         public Task<FIAEvent> GetEventAsync(uint eventId, string series, ContentType contentType, CancellationToken cancellationToken = default)
         {
@@ -118,7 +118,7 @@ namespace F1Interface
                 queryBuilder.AddParameter(Constants.QueryParameters.FilterBySeries, series);
             }
 
-            if (contentType != ContentType.Unknown)
+            if (contentType > ContentType.Unspecified)
             {
                 string contentTypeString = ContentParser.TypeToString(contentType);
                 queryBuilder.AddParameter(Constants.QueryParameters.FilterByType, contentTypeString); 
@@ -149,7 +149,7 @@ namespace F1Interface
                         Id = rawSession.Id,
                         OfficialName = metadata.Title,
                         Name = metadata.TitleBrief,
-                        EventId = uint.Parse(metadata.Attributes.MeetingKey),
+                        EventId = metadata.Attributes.MeetingId,
                         Testing = metadata.Attributes.IsTest,
                         Available = metadata.Attributes.IsOnAir,
                         Starts = DateTimeUtils.UnixToDateTime(metadata.ContractStartDate),
@@ -247,7 +247,11 @@ namespace F1Interface
             {
                 if (result.ResultCode == "OK" && result.Result != null && result.Result.Total > 0)
                 {   
-                    var events = result.Result.Containers.Select(x => ParseEvent(x.Metadata))
+                    var events = result.Result.Containers
+                        .Where(x => x.Metadata.Attributes.MeetingId > 0)
+                        .OrderBy(x => x.Metadata.Attributes.MeetingStarts)
+                        .GroupBy(x => x.Metadata.Attributes.MeetingId)
+                        .Select(x => ParseEvent(x.First().Metadata))
                         .ToArray();
 
                     return events;
@@ -272,7 +276,7 @@ namespace F1Interface
                 {
                     var metadata = result.Result.Containers.Where(x => x.Metadata != null
                             && x.Metadata.Attributes != null
-                            && x.Metadata.Attributes.MeetingKey != string.Empty)
+                            && x.Metadata.Attributes.MeetingId != 0)
                         .OrderByDescending(x => x.Metadata.Attributes.MeetingStarts)
                         .ThenByDescending(x => x.Metadata.Attributes.MeetingEnds)
                         .Select(x => x.Metadata)
@@ -311,7 +315,7 @@ namespace F1Interface
         private FIAEvent ParseEvent(EventMetadata metadata)
             => new FIAEvent
             {
-                Id = uint.Parse(metadata.Attributes.MeetingKey),
+                Id = metadata.Attributes.MeetingId,
                 Name = metadata.Attributes.MeetingName,
                 OfficialName = metadata.Attributes.MeetingOfficialName,
                 SeasonId = metadata.Season,
@@ -321,7 +325,7 @@ namespace F1Interface
 
                 Circuit = new Circuit
                 {
-                    Id = metadata.Attributes.CircuitKey,
+                    Id = metadata.Attributes.CircuitId,
                     Location = metadata.Attributes.MeetingLocation,
                     Name = metadata.Attributes.CircuitShortName,
                     OfficialName = metadata.Attributes.CircuitShortName
@@ -336,7 +340,7 @@ namespace F1Interface
                 Id = rawEvent.Id,
                 OfficialName = metadata.Title,
                 Name = metadata.TitleBrief,
-                EventId = uint.Parse(metadata.Attributes.MeetingKey),
+                EventId = metadata.Attributes.MeetingId,
                 Testing = metadata.Attributes.IsTest,
                 Available = metadata.Attributes.IsOnAir,
                 Starts = DateTimeUtils.UnixToDateTime(metadata.ContractStartDate),

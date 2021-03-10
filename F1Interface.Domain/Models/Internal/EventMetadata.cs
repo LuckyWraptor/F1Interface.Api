@@ -21,11 +21,40 @@ namespace F1Interface.Domain.Models.Internal
         public string Type { get; set; }
         [JsonPropertyName("pictureUrl")]
         public string PictureId { get; set; }
-        public uint Season { get; set; }
+        public uint Season
+        {
+            get => (season > 0) ? season : year;
+            set => season = value;
+        }
+        [JsonIgnore]
+        public uint Year
+        {
+            get => (year > 0) ? year : season;
+        }
         public uint StarRating { get; set; }
         public string TitleBrief { get; set; }
         public string UiDuration { get; set; }
         [JsonPropertyName("emfAttributes")]
         public EventAttributes Attributes { get; set; }
+
+        [JsonPropertyName("year")]
+        public string YearHandler
+        {
+            set
+            {
+                if (!string.IsNullOrWhiteSpace(value) && uint.TryParse(value, out uint year))
+                {
+                    if (season == 0)
+                    {
+                        season = year;
+                    }
+
+                    this.year = year;
+                }
+            }
+        }
+
+        private uint year;
+        private uint season;
     }
 }

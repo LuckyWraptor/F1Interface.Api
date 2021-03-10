@@ -23,6 +23,7 @@ namespace F1Interface.Domain
             public const string FilterPastEvent = "filter_meetingsPast";
             public const string FilterUpcomingEvent = "filter_meetingsUpcoming";
             public const string FilterFetchAll = "filter_fetchAll";
+            public const string FilterByYear = "filter_year";
             public const string OrderBy = "orderBy";
             public const string SortOrder = "sortOrder";
         }

@@ -4,7 +4,7 @@ namespace F1Interface.Domain.Models
 {
     public enum ContentType
     {
-        Unknown,
+        Unspecified,
         Analysis,
         Documentary,
         Feature,

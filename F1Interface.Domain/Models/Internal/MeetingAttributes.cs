@@ -5,7 +5,7 @@ namespace F1Interface.Domain.Models.Internal
 {
     internal class MeetingAttributes
     {
-        public string MeetingKey { get; set; }
+        public uint MeetingId { get; private set; }
         public string MeetingSessionKey { get; set; }
         [JsonPropertyName("Meeting_Name")]
         public string MeetingName { get; set; }
@@ -45,6 +45,17 @@ namespace F1Interface.Domain.Models.Internal
                 if (!string.IsNullOrWhiteSpace(value) && DateTime.TryParse(value, out DateTime dt))
                 {
                     MeetingEnds = dt;
+                }
+            }
+        }
+
+        public string MeetingKey
+        {
+            set
+            {
+                if (!string.IsNullOrWhiteSpace(value) && uint.TryParse(value, out uint key))
+                {
+                    MeetingId = key;
                 }
             }
         }

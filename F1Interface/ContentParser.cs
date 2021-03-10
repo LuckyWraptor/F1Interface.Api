@@ -7,15 +7,15 @@ namespace F1Interface
         public static ContentType DetermineType(string contentSubType)
             => contentSubType.ToUpper() switch
             {
-                "ANALYSIS" => ContentType.Analysis,
-                "DOCUMENTARY" => ContentType.Documentary,
-                "FEATURE" => ContentType.Feature,
-                "HIGHLIGHTS" => ContentType.Highlights,
-                "MEETING" => ContentType.Meeting,
-                "PRESS CONFERENCE" => ContentType.PressConference,
-                "REPLAY" => ContentType.Replay,
-                "SHOW" => ContentType.Show,
-                _ => ContentType.Unknown
+                "ANALYSIS" or "1" => ContentType.Analysis,
+                "DOCUMENTARY" or "2" => ContentType.Documentary,
+                "FEATURE" or "3" => ContentType.Feature,
+                "HIGHLIGHTS" or "4" => ContentType.Highlights,
+                "MEETING" or "5" => ContentType.Meeting,
+                "PRESS CONFERENCE" or "6" => ContentType.PressConference,
+                "REPLAY" or "7" => ContentType.Replay,
+                "SHOW" or "8" => ContentType.Show,
+                _ => ContentType.Unspecified
             };
 
         public static string TypeToString(ContentType type)
