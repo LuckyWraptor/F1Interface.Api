@@ -5,7 +5,13 @@ namespace F1Interface
     public class ContentParser
     {
         public static ContentType DetermineType(string contentSubType)
-            => contentSubType.ToUpper() switch
+        {
+            if (string.IsNullOrWhiteSpace(contentSubType))
+            {
+                return ContentType.Unspecified;
+            }
+
+            return contentSubType.ToUpper() switch
             {
                 "ANALYSIS" or "1" => ContentType.Analysis,
                 "DOCUMENTARY" or "2" => ContentType.Documentary,
@@ -15,8 +21,10 @@ namespace F1Interface
                 "PRESS CONFERENCE" or "6" => ContentType.PressConference,
                 "REPLAY" or "7" => ContentType.Replay,
                 "SHOW" or "8" => ContentType.Show,
+                "LIVE" or "9" => ContentType.Live,
                 _ => ContentType.Unspecified
             };
+        }
 
         public static string TypeToString(ContentType type)
             => type switch
@@ -29,6 +37,7 @@ namespace F1Interface
                 ContentType.PressConference => "Press Conference",
                 ContentType.Replay => "Replay",
                 ContentType.Show => "Show",
+                ContentType.Live => "Live",
                 _ => null
             };
     }

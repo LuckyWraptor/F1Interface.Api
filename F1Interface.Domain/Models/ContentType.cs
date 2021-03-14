@@ -13,6 +13,6 @@ namespace F1Interface.Domain.Models
         PressConference,
         Replay,
         Show,
-        //Live?
+        Live
     }
 }
