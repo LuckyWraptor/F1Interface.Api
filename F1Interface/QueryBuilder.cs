@@ -13,6 +13,23 @@ namespace F1Interface
             stringBuilder = new StringBuilder(baseUri);
         }
 
+        public QueryStringBuilder AppendUri(string uri)
+        {
+            bool endsWithSlash = (stringBuilder[stringBuilder.Length - 1] == '/');
+            if (uri[0] != '/' && !endsWithSlash)
+            {
+                stringBuilder.Append('/');
+            }
+            else if (uri[0] == '/' && endsWithSlash)
+            {
+                stringBuilder.Length = stringBuilder.Length - 1;
+            }
+
+            stringBuilder.Append(uri);
+
+            return this;
+        }
+
         public QueryStringBuilder AddParameter(string name, object value)
         {
             if (firstParameter)

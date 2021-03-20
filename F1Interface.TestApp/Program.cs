@@ -36,17 +36,21 @@ namespace F1Interface.TestApp
 
         public static async Task DoTests()
         {
-            await contentService.GetSeasonAsync(2017);
-            await contentService.GetSeasonAsync(2018);
-            await contentService.GetSeasonAsync(2020);
-            await contentService.GetSeasonAsync(2021);
-            await contentService.GetCurrentSeasonAsync();
-            await contentService.GetUpcomingEventsAsync();
-            await contentService.GetPastEventsAsync();
+            // await contentService.GetSeasonAsync(2017);
+            // await contentService.GetSeasonAsync(2018);
+            // await contentService.GetSeasonAsync(2020);
+            // await contentService.GetSeasonAsync(2021);
+            // await contentService.GetCurrentSeasonAsync();
+            // await contentService.GetUpcomingEventsAsync();
+            // await contentService.GetPastEventsAsync();
 
-            await contentService.GetEventAsync(1043);
+            // await contentService.GetEventAsync(1065);
+            var result = await contentService.GetEventWithScheduleAsync(1064);
+            // await contentService.GetEventAsync(1087);
 
             await contentService.GetContentAsync(1000000823);
+
+            // await contentService.GetLiveContentAsync();
         }
     }
 }

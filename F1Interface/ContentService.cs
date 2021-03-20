@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -125,6 +126,22 @@ namespace F1Interface
             }
 
             return GetEvent(queryBuilder, cancellationToken);
+        }
+
+        public Task<FIAEvent> GetEventWithScheduleAsync(uint eventId, CancellationToken cancellationToken = default)
+        {
+            return GetEventWithScheduleAsync(eventId, null, cancellationToken);
+        }
+        public Task<FIAEvent> GetEventWithScheduleAsync(uint eventId, string series, CancellationToken cancellationToken = default)
+        {
+            // Generate request string
+            QueryStringBuilder queryBuilder = new QueryStringBuilder(Endpoints.F1TV.SearchEndpoint)
+                .AddParameter(Constants.QueryParameters.FilterByEvent, eventId)
+                .AddParameter(Constants.QueryParameters.OrderBy, "session_index")
+                .AddParameter(Constants.QueryParameters.SortOrder, "asc")
+                .AddParameter(Constants.QueryParameters.FilterOrderDate, "Y");
+
+            return GetEventWithSchedule(queryBuilder, series, cancellationToken);
         }
 #endregion
 #region Content
@@ -295,6 +312,71 @@ namespace F1Interface
             }
             
             
+            throw new F1InterfaceException("The response was invalid, this shouldn't happen!");
+        }
+
+        private async Task<FIAEvent> GetEventWithSchedule(QueryStringBuilder queryBuilder, string series, CancellationToken cancellationToken)
+        {
+            if (!string.IsNullOrWhiteSpace(series))
+            {
+                series = series.Trim().ToUpper();
+                if (!Constants.Categories.KnownCategories.Contains(series))
+                {
+                    throw new ArgumentException($"The specified series isn't supported, use one of {string.Join(", ", Constants.Categories.KnownCategories)}");
+                }
+
+                queryBuilder.AddParameter(Constants.QueryParameters.FilterBySeries, series);
+            }
+
+            EventResponse result = await RESTRequestObject<EventResponse>(queryBuilder, cancellationToken);
+            if (result != null && result.ResultCode != null && result.ResultCode == "OK"
+                && result.Result != null && result.Result.Total > 0 && result.Result.Containers.Length > 0)
+            {
+                Event container = result.Result.Containers[0];
+                if (container.Actions.Length > 0)
+                {
+                    var action = container.Actions.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x.Uri) && x.Key == "onClick");
+                    if (action != null)
+                    {
+                        QueryStringBuilder scheduleQueryBuilder = new QueryStringBuilder(Endpoints.F1TV.ApiBase)
+                            .AppendUri(action.Uri);
+
+                        EventFullResponse schedule = await RESTRequestObject<EventFullResponse>(scheduleQueryBuilder, cancellationToken);
+                        if (schedule != null && schedule.ResultCode != null && schedule.ResultCode == "OK"
+                            && schedule.Result != null && schedule.Result.Total > 0)
+                        {
+                            EventFullContainer fullContainer = schedule.Result.Containers.FirstOrDefault(x => x.Layout == "schedule");
+                            if (fullContainer != null && fullContainer.Items != null && fullContainer.Items.Categories != null
+                                && fullContainer.Items.Categories.Total > 0)
+                            {
+                                EventFullCategory eventCategory = fullContainer.Items.Categories.Containers.FirstOrDefault(x => x.Name == "ALL");
+                                if (eventCategory != null)
+                                {
+                                    Event[] sessions = eventCategory.Events.Where(x => x.Metadata.Type == "VIDEO")
+                                        .ToArray();
+                                    if (sessions != null && sessions.Length > 0)
+                                    {   
+                                        var metadata = result.Result.Containers.Where(x => x.Metadata != null
+                                                && x.Metadata.Attributes != null
+                                                && x.Metadata.Attributes.MeetingId != 0)
+                                            .OrderByDescending(x => x.Metadata.Attributes.MeetingStarts)
+                                            .ThenByDescending(x => x.Metadata.Attributes.MeetingEnds)
+                                            .Select(x => x.Metadata)
+                                            .FirstOrDefault();
+
+                                        FIAEvent fiaEvent = ParseEvent(metadata);
+                                        fiaEvent.Sessions = sessions.Select(x => ParseSession(x))
+                                            .ToArray();
+
+                                        return fiaEvent;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             throw new F1InterfaceException("The response was invalid, this shouldn't happen!");
         }
 
