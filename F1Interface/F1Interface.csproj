@@ -9,7 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="PlaywrightSharp" Version="0.191.2" />
+    <PackageReference Include="PlaywrightSharp" Version="0.192.0" />
   </ItemGroup>
   
   <ItemGroup>

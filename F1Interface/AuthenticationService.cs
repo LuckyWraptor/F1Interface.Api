@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using F1Interface.Contracts;
@@ -86,6 +88,8 @@ namespace F1Interface
 
             await page.WaitForSelectorAsync("#loginform");
 
+            await page.EvaluateAsync("document.cookie.indexOf('reese84') > -1");
+
             await RandomDelay(cancellationToken)
                 .ConfigureAwait(false);
             await TypeAsync(page, LoginSelector, login, cancellationToken)
@@ -96,7 +100,26 @@ namespace F1Interface
             await TypeAsync(page, PasswordSelector, password, cancellationToken)
                 .ConfigureAwait(false);
 
-            Task<IResponse> responseTask = page.WaitForResponseAsync(Endpoints.AuthenticationByPassword, 15000);
+            await page.RouteAsync(Endpoints.AuthenticationByPassword, async (route, request) =>
+            {
+                if (request.Method == HttpMethod.Options)
+                {
+                    await route.FulfillAsync(HttpStatusCode.OK, null,
+                        new Dictionary<string, string>
+                        {
+                            { "access-control-allow-headers", "Cache-Control, Origin, X-Requested-With, Accept, Content-Type, apikey, x-api-key, IpAddressOverride" },
+                            { "access-control-allow-methods", "POST" },
+                            { "access-control-allow-origin", "https:/account.formula1.com"},
+                            { "access-control-max-age", "3628800" }
+                        });
+                }
+                else
+                {
+                    await route.ContinueAsync();
+                }
+            });
+
+            Task<IResponse> responseTask = page.WaitForResponseAsync(Endpoints.AuthenticationByPassword, 100000);
             await ClickButtonAsync(page, LoginButtonSelector);
             
 #if DEBUG

@@ -110,7 +110,7 @@ namespace F1Interface
 
             if (!string.IsNullOrWhiteSpace(series))
             {
-                series = series.Trim().ToUpper();
+                series = Uri.UnescapeDataString(series).Trim().ToUpper();
                 if (!Constants.Categories.KnownCategories.Contains(series))
                 {
                     throw new ArgumentException($"The specified series isn't supported, use one of {string.Join(", ", Constants.Categories.KnownCategories)}");
@@ -317,17 +317,6 @@ namespace F1Interface
 
         private async Task<FIAEvent> GetEventWithSchedule(QueryStringBuilder queryBuilder, string series, CancellationToken cancellationToken)
         {
-            if (!string.IsNullOrWhiteSpace(series))
-            {
-                series = series.Trim().ToUpper();
-                if (!Constants.Categories.KnownCategories.Contains(series))
-                {
-                    throw new ArgumentException($"The specified series isn't supported, use one of {string.Join(", ", Constants.Categories.KnownCategories)}");
-                }
-
-                queryBuilder.AddParameter(Constants.QueryParameters.FilterBySeries, series);
-            }
-
             EventResponse result = await RESTRequestObject<EventResponse>(queryBuilder, cancellationToken);
             if (result != null && result.ResultCode != null && result.ResultCode == "OK"
                 && result.Result != null && result.Result.Total > 0 && result.Result.Containers.Length > 0)
@@ -352,8 +341,18 @@ namespace F1Interface
                                 EventFullCategory eventCategory = fullContainer.Items.Categories.Containers.FirstOrDefault(x => x.Name == "ALL");
                                 if (eventCategory != null)
                                 {
-                                    Event[] sessions = eventCategory.Events.Where(x => x.Metadata.Type == "VIDEO")
-                                        .ToArray();
+                                    Event[] sessions;
+                                    if (!string.IsNullOrWhiteSpace(series))
+                                    {
+                                        sessions = eventCategory.Events.Where(x => x.Metadata.Type == "VIDEO" && x.Properties[0].Series == Uri.UnescapeDataString(series).Trim().ToUpper())
+                                            .ToArray();
+                                    }
+                                    else
+                                    {
+                                        sessions = eventCategory.Events.Where(x => x.Metadata.Type == "VIDEO")
+                                            .ToArray();
+                                    }
+                    
                                     if (sessions != null && sessions.Length > 0)
                                     {   
                                         var metadata = result.Result.Containers.Where(x => x.Metadata != null
@@ -372,6 +371,8 @@ namespace F1Interface
                                     }
                                 }
                             }
+
+                            return null;
                         }
                     }
                 }
