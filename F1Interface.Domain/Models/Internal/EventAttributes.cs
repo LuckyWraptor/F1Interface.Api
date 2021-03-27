@@ -14,6 +14,9 @@ namespace F1Interface.Domain.Models.Internal
         public bool IsTest { get; set; }
         public bool IsOnAir { get; set; }
 
+        public ulong SessionStartDate { get; set; }
+        public ulong SessionEndDate { get; set; }
+
         [JsonPropertyName("IsTestEvent")]
         public string TestEventChecker
         {

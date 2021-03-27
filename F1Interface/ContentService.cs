@@ -426,14 +426,14 @@ namespace F1Interface
                 EventId = metadata.Attributes.MeetingId,
                 Testing = metadata.Attributes.IsTest,
                 Available = metadata.Attributes.IsOnAir,
-                Starts = DateTimeUtils.UnixToDateTime(metadata.ContractStartDate),
-                Ends = DateTimeUtils.UnixToDateTime(metadata.ContractEndDate),
                 ImageId = metadata.PictureId,
                 Series = rawEvent.Properties[0]?.Series,
                 Type = ContentParser.DetermineType(metadata.ContentSubtype),
                 Duration = metadata.Duration
             };
 
+            session.Starts = DateTimeUtils.UnixToDateTime(metadata.Attributes?.SessionStartDate > 0 ? metadata.Attributes.SessionStartDate : metadata.ContractStartDate);
+            session.Ends = DateTimeUtils.UnixToDateTime(metadata.Attributes?.SessionEndDate > 0 ? metadata.Attributes.SessionEndDate : metadata.ContractEndDate);
             return session;
         }
 
