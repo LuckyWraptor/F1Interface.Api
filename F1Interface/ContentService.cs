@@ -321,7 +321,7 @@ namespace F1Interface
             if (result != null && result.ResultCode != null && result.ResultCode == "OK"
                 && result.Result != null && result.Result.Total > 0 && result.Result.Containers.Length > 0)
             {
-                Event container = result.Result.Containers[0];
+                Event container = result.Result.Containers.FirstOrDefault(x => x.Metadata.ContentSubtype == "MEETING");
                 if (container.Actions.Length > 0)
                 {
                     var action = container.Actions.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x.Uri) && x.Key == "onClick");
