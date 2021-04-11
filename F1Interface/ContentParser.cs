@@ -16,7 +16,7 @@ namespace F1Interface
                 "ANALYSIS" or "1" => ContentType.Analysis,
                 "DOCUMENTARY" or "2" => ContentType.Documentary,
                 "FEATURE" or "3" => ContentType.Feature,
-                "HIGHLIGHTS" or "4" => ContentType.Highlights,
+                "HIGHLIGHTS" or "RACE HIGHLIGHTS" or "4" => ContentType.Highlights,
                 "MEETING" or "5" => ContentType.Meeting,
                 "PRESS CONFERENCE" or "6" => ContentType.PressConference,
                 "REPLAY" or "7" => ContentType.Replay,
